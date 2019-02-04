@@ -6,26 +6,27 @@
 /*----------------------------------------------------------------------------*/
 
 #include "Robot.h"
-#include <frc/WPILib.h>
+//#include <pathfinder.h>
 #include <iostream>
-#include <ctre/Phoenix.h>
+
 #include <frc/smartdashboard/SmartDashboard.h>
-#include "MPLeftController.h"
-#include "MPRightController.h"
-
+#include <WPILib.h>
+#include "frc/smartdashboard/Smartdashboard.h"
+#include "networktables/NetworkTable.h"
+#include "networktables/NetworkTableInstance.h"
+#include "networktables/NetworkTableEntry.h"
+#include "LeftProfile.h"
+void Robot::executeProfile()
+{
+    LeftDrive.StartMotionProfile(LeftMP, 10, ControlMode::MotionProfile);
+}
 void Robot::RobotInit() {
+  double P=0.1;//.05
+	double I=0.0;//.01
+	double D=0.0;//.2
 
-/*
-	Good for max speed FPS:.75 and max acceleration: .5 double P=.11; double I=.01;
-	Good for max speed FPS:1.5 and max acceleration: 1 double P=.05; double I=.01; double D=.2;
-	  */
-int Spot = 0;
-	double P=.01;
-	double I=.01;
-	double D=.2;
-  
-			LeftDrive.Config_kF(0,.14884,10);
-			RightDrive.Config_kF(0,.14884,10);
+			LeftDrive.Config_kF(0,.5,10);
+			RightDrive.Config_kF(0,.5,10);
 			LeftDrive.EnableCurrentLimit(true);
 			LeftDrive.ConfigOpenloopRamp(.125,10);
 			LeftDrive.ConfigPeakCurrentLimit(30,10);
@@ -36,10 +37,7 @@ int Spot = 0;
 			LeftDrive.Config_IntegralZone(0,100,10);
 			LeftDrive.ConfigSelectedFeedbackSensor(QuadEncoder,0,10);
 			LeftDrive.SetSensorPhase(true);
-			LeftDrive.ConfigClosedLoopPeakOutput(0,1,10);
-			RightDrive.ConfigClosedLoopPeakOutput(0,1,10);
-			RightDrive.ConfigClosedloopRamp(.125,10);
-			LeftDrive.ConfigClosedloopRamp(.125,10);
+
 			LeftDrive.SetInverted(true);
 			LeftDrive.ConfigMotionProfileTrajectoryPeriod(30,10);
 			LeftDrive1.SetInverted(LeftDrive.GetInverted());
@@ -63,9 +61,6 @@ int Spot = 0;
 			RightDrive.SetSensorPhase(true);
 
 			RightDrive.ConfigMotionProfileTrajectoryPeriod(30,10);
-		//	RightDrive.SetStatusFramePeriod(StatusFrameEnhanced::Status_10_MotionMagic,
-			//10, Constants::kTimeoutMs);
-
   m_chooser.SetDefaultOption(kAutoNameDefault, kAutoNameDefault);
   m_chooser.AddOption(kAutoNameCustom, kAutoNameCustom);
   frc::SmartDashboard::PutData("Auto Modes", &m_chooser);
@@ -103,7 +98,7 @@ void Robot::AutonomousInit() {
   } else {
     // Default Auto goes here
   }
-	}
+}
 
 void Robot::AutonomousPeriodic() {
   if (m_autoSelected == kAutoNameCustom) {
@@ -111,213 +106,160 @@ void Robot::AutonomousPeriodic() {
   } else {
     // Default Auto goes here
   }
-	}
+}
+void Robot::fillBuffer(int Sz, double Prof[][3])
+{
+    TrajectoryPoint pointL; //Create just one trajectorypoint to write with
+    for(int i = 0; i < Sz; i++)
+    {
+        pointL.useAuxPID = false; //We aren't using aux pid
+        pointL.profileSlotSelect0 = 0; //Use slot 0 for PIDF Gains
 
+        if(i == 0) pointL.zeroPos = true;
+        else pointL.zeroPos = false;
+
+        pointL.position = Prof[i][0]; //Scale to talon native units
+        pointL.velocity = Prof[i][1]; //Scale to talon native units
+        pointL.timeDur = Prof[i][2]; //Milliseconds
+        
+        if(i == Sz - 1) pointL.isLastPoint = true;
+        else pointL.isLastPoint = false;
+
+        LeftMP.Write(pointL);
+
+
+    }
+}
 void Robot::TeleopInit() {}
 void Robot::ProfileControl(){
-	RightProfile.control();
-	RightProfile.PeriodicTask();
-	LeftProfile.control();
-	LeftProfile.PeriodicTask();
-	
-	
-	if(Robot::Spot>0 and Robot::Spot<4){
-	Robot::ProfileRun(Robot::ProfileIdentification);
-	SetValueMotionProfile setOutputL = LeftProfile.getSetValue();
-		SetValueMotionProfile setOutputR = RightProfile.getSetValue();
+ 
+ /*   SetValueMotionProfile setOutputL = LeftMP.getSetValue();
+		SetValueMotionProfile setOutputR = RightMP.getSetValue();
+		
 	LeftDrive.Set(ControlMode::MotionProfile, setOutputL);
 	RightDrive.Set(ControlMode::MotionProfile, setOutputR);
+  RightMP.control();
+	RightMP.PeriodicTask();
+	LeftMP.control();
+	LeftMP.PeriodicTask();*/
+ 
+ 	if(Robot::spot<=2 and Robot::spot>0){
+     Robot::RunProfile(Robot::pop);
+  }
 	}
-	}
-void Robot::ProfileRun(int ProfID){
+void Robot::RunProfile(int ProfID){
+ 
+ /* switch(Robot::spot){
+  case 0:
+  LeftMP.reset();
+  RightMP.reset();
+  LeftMP.ProfileID = ProfID;
+  RightMP.ProfileID = ProfID;
+   Robot::spot = 1;
+	 
+  Robot::pop = ProfID;
+  
+ 
+  break;
+  case 1:
+  LeftMP.start();
+  RightMP.start();
 
-	switch(Robot::Spot){
-	case 0:
-	LeftProfile.reset();
-	RightProfile.reset();
-	Robot::ProfileIdentification = ProfID;
-	LeftProfile.ProfileSlotL = ProfID;
-	RightProfile.ProfileSlotR = ProfID;
-	Robot::Spot = 1;
-	break;
-	case 1:
-	LeftProfile.start();
-	RightProfile.start();
-	Robot::Spot = 2;
-	break;
+  Robot::spot = 2;
+  break;
+  case 2:
+ 
 
-	}
-	}
-
-
-void Robot::ProfileSchedule(int ProfOne,int ProfTwo, int ProfThree, int ProfFour, int ProfFive, int ProfSix,int ProfSeven){
-	switch(Robot::Scheduler){
-		case 0:
-
-			if(ProfOne > 0 ){
-			Robot::Scheduler++;	
-			}else{
-			Robot::Scheduler = 1000;
-			};
-			break;
-		case 1:
-		Robot::Spot = 0;
-		Robot::Scheduler++;
-		break;
-		case 2:
-		
-			Robot::ProfileRun(ProfOne);
-			if(ProfTwo > 0 and LeftProfile._statusL.isLast==1){
-				Robot::Scheduler++;
-			}else if(ProfTwo <= 0){
-			Robot::Scheduler = 1000;
-			}
-			break;
-			case 3:
-		Robot::Spot = 0;
-		Robot::Scheduler++;
-		break;
-		case 4:
-	
-			Robot::ProfileRun(ProfTwo);
-			if(ProfThree > 0 and LeftProfile._statusL.isLast==1){
-				Robot::Scheduler++;
-			}else if(ProfThree <= 0){
-			Robot::Scheduler = 1000;
-			}
-			break;
-			case 5:
-		Robot::Spot = 0;
-		Robot::Scheduler++;
-		break;
-		case 6:
-		
-			Robot::ProfileRun(ProfThree);
-			if(ProfFour > 0 and LeftProfile._statusL.isLast==1){
-				Robot::Scheduler++;
-			}else if(ProfFour <= 0){
-			Robot::Scheduler = 1000;
-			}
-			break;
-			case 7:
-		Robot::Spot = 0;
-		Robot::Scheduler++;
-		break;
-		case 8:
-		
-			Robot::ProfileRun(ProfFour);
-			if(ProfFive > 0 and LeftProfile._statusL.isLast==1){
-				Robot::Scheduler++;
-			}else if(ProfFive <= 0){
-			Robot::Scheduler = 1000;
-			}
-			break;
-			case 9:
-		Robot::Spot = 0;
-		Robot::Scheduler++;
-		break;
-		case 10:
-		
-			Robot::ProfileRun(ProfFive);
-			if(ProfSix > 0 and LeftProfile._statusL.isLast==1){
-				Robot::Scheduler++;
-			}else if(ProfSix <= 0){
-			Robot::Scheduler = 1000;
-			}
-			break;
-			case 11:
-		Robot::Spot = 0;
-		Robot::Scheduler++;
-		break;
-		case 12:
-		
-			Robot::ProfileRun(ProfSix);
-			if(ProfSeven > 0 and LeftProfile._statusL.isLast==1){
-				Robot::Scheduler++;
-			}else if(ProfSeven <= 0){
-			Robot::Scheduler = 1000;
-			}
-			break;
-			case 13:
-		Robot::Spot = 0;
-		Robot::Scheduler++;
-		break;
-		case 14:
-		
-			Robot::ProfileRun(ProfSeven);
-			if(LeftProfile._statusL.isLast==1){
-				Robot::Scheduler = 1000;
-			}
-			break;
-			case 15:
-		Robot::Spot = 10;
-		Robot::Scheduler++;
-		break;
-		case 1000:
-		
-		break;
-			}
-	}
-void Robot::TeleopPeriodic() {
-	ProfileControl();
-	/*if(Driver.GetYButtonPressed()==1){
-		
-		Robot::Spot = 0;
-		Robot::ProfileRun(0);
-		}
-	if(Driver.GetBButtonPressed()==1){
-			
-			Robot::Spot = 0;
-			Robot::ProfileRun(1);
-		}
-	*/
-/*if(Driver.GetAButtonPressed()==1){
-		Robot::Spot = 0;
-			Robot::ProfileRun(6);
-	}*/
-	/*
-	if(Driver.GetXButtonPressed()==1){
-		Robot::Spot = 0;
-		Robot::ProfileRun(3);
-	}
-	if(Driver.GetBumperPressed(frc::XboxController::kLeftHand)==1){
-		Robot::Spot = 0;
-		Robot::ProfileRun(4);
-	}
-	if(Driver.GetBumperPressed(frc::XboxController::kRightHand)==1){
-		Robot::Spot = 0;
-		Robot::ProfileRun(5);
-	}*/
-	/*if(Driver.GetAButtonPressed()==1){
-			Robot::Scheduler =0;
-		}*/
-	//Robot::ProfileSchedule(1,2,3,4,5,0,0);
-	LeftDrive.Set(ControlMode::PercentOutput,Driver.GetY(frc::XboxController::kLeftHand));
-	RightDrive.Set(ControlMode::PercentOutput,Driver.GetY(frc::XboxController::kRightHand));
-		frc::SmartDashboard::PutNumber("SPot",Spot);
-		frc::SmartDashboard::PutNumber("PRofileID",Robot::ProfileIdentification);
-		frc::SmartDashboard::PutNumber("VelocityR",RightDrive.GetSelectedSensorVelocity(0));
-		frc::SmartDashboard::PutNumber("VelocityL",LeftDrive.GetSelectedSensorVelocity(0));
-		frc::SmartDashboard::PutNumber("RotR",RightDrive.GetSelectedSensorPosition(0)/4096);
-		frc::SmartDashboard::PutNumber("RotL",LeftDrive.GetSelectedSensorPosition(0)/4096);
-		frc::SmartDashboard::PutNumber("Scheduler",Robot::Scheduler);
-		frc::SmartDashboard::PutBoolean("isLast",LeftProfile._statusL.isLast);
-		frc::SmartDashboard::PutNumber("bottombufferL",LeftProfile._statusL.btmBufferCnt);
-		frc::SmartDashboard::PutNumber("topbufferL",LeftProfile._statusL.topBufferCnt);
-		frc::SmartDashboard::PutNumber("bottombufferR",RightProfile._statusR.btmBufferCnt);
-		frc::SmartDashboard::PutNumber("topbufferR",RightProfile._statusR.topBufferCnt);
-
-	
-
-
-	
   
 
+  
+  break;
+  
+  }*/
+	}
+void Robot::FollowPath(){
+ for(int i = 0; i < Robot::total; i++){
 
-	LeftDrive1.Set(ControlMode::PercentOutput,LeftDrive.GetMotorOutputPercent());
+ }
+	}
+void Robot::TeleopPeriodic() {
+	//	LeftDrive.StartMotionProfile()
+
+	std::shared_ptr<NetworkTable> table = nt::NetworkTableInstance::GetDefault().GetTable("limelight");
+	double targetOffsetAngle_Horizontal = table->GetNumber("tx",0.0);
+	double targetOffsetAngle_Vertical = table->GetNumber("ty",0.0);
+	double targetArea = table->GetNumber("ta",0.0);
+	double targetSkew = table->GetNumber("ts",0.0);
+
+	
+	if(Driver.GetBButtonPressed()==1){
+		Robot::drive = !Robot::drive;
+	}
+	if(Driver.GetYButtonPressed()==1){
+  fillBuffer(RocketszL,RocketL);
+  // Robot::spot = 0;
+  // Robot::RunProfile(1);
+	};
+	 if(Driver.GetXButtonPressed()==1){
+  executeProfile();
+  // Robot::spot = 0;
+   //Robot::RunProfile(4);
+	};
+	/*if(Robot::drive == 1){
+		LeftDrive.Set(ControlMode::PercentOutput,Driver.GetY(frc::XboxController::kLeftHand));
+		RightDrive.Set(ControlMode::PercentOutput,Driver.GetY(frc::XboxController::kRightHand));
+	}else{Robot::ProfileControl();
+ 
+  if(Driver.GetAButtonPressed()==1){
+	Robot::spot = 0;
+   Robot::RunProfile(2);
+	 /*	if(LeftMP._statusL.btmBufferCnt>100 and RightMP._statusR.btmBufferCnt >100){
+		 LeftDrive.ConfigPeakOutputForward(0,10);
+		 LeftDrive.ConfigPeakOutputReverse(0,10);
+		 RightDrive.ConfigPeakOutputForward(0,10);
+		 RightDrive.ConfigPeakOutputReverse(0,10);
+	 }else{
+		 LeftDrive.ConfigPeakOutputForward(1,10);
+		 LeftDrive.ConfigPeakOutputReverse(-1,10);
+		 RightDrive.ConfigPeakOutputForward(1,10);
+		 RightDrive.ConfigPeakOutputReverse(-1,10);
+	 }
+  }*/
+
+  //}
+ LeftDrive.ConfigPeakOutputForward(1,10);
+		 LeftDrive.ConfigPeakOutputReverse(-1,10);
+		 RightDrive.ConfigPeakOutputForward(1,10);
+		 RightDrive.ConfigPeakOutputReverse(-1,10);
+
+	Pigeon.GetFusedHeading();
+	double xyz[3];
+	Pigeon.GetAccumGyro(xyz);
+
+ int LeftEn = LeftDrive.GetSelectedSensorPosition(0);
+ int RightEn = RightDrive.GetSelectedSensorPosition(0);
+ 	LeftDrive1.Set(ControlMode::PercentOutput,LeftDrive.GetMotorOutputPercent());
 	LeftDrive2.Set(ControlMode::PercentOutput,LeftDrive.GetMotorOutputPercent());
 	RightDrive1.Set(ControlMode::PercentOutput,RightDrive.GetMotorOutputPercent());
 	RightDrive2.Set(ControlMode::PercentOutput,RightDrive.GetMotorOutputPercent());
+	LeftDrive.GetMotionProfileTopLevelBufferCount();
+  frc::SmartDashboard::PutNumber("spot",Robot::spot);
+ /* frc::SmartDashboard::PutNumber("LeftBtm",LeftMP._statusL.btmBufferCnt);
+	 frc::SmartDashboard::PutNumber("RightBtm",RightMP._statusR.btmBufferCnt);
+	if(Driver.GetYButtonPressed()==1){
+
+	Pigeon.SetAccumZAngle(0,10);
+
+	Robot::spot = 0;
+	}
+	frc::SmartDashboard::PutNumber("horizontal",targetOffsetAngle_Horizontal);*/
+		frc::SmartDashboard::PutNumber("rightEncoder", RightEn/4096);
+	frc::SmartDashboard::PutNumber("LeftEncoder", LeftEn/4096);
+	frc::SmartDashboard::PutNumber("Buffer", 	LeftDrive.GetMotionProfileTopLevelBufferCount());
+	frc::SmartDashboard::PutNumber("x",xyz[1]);
+	frc::SmartDashboard::PutNumber("y",xyz[2]);
+	frc::SmartDashboard::PutNumber("z",xyz[3]);
+
 
 	}
 

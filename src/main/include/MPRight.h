@@ -1,5 +1,5 @@
-#ifndef MPLeft__h_
-#define MPLeft__h_
+#ifndef MPRight__h_
+#define MPRight__h_
 /**
  * Example logic for firing and managing motion profiles.
  * This example sends MPs, waits for them to finish
@@ -26,12 +26,12 @@
 #include "frc/WPILib.h"
 #include "ctre/Phoenix.h"
 #include "Instrumentation.h"
-#include "LeftProfile.h"
+#include "RightProfile.h"
 #include "Constants.h"
 
 using namespace frc;
 
-class MPL {
+class MP {
 public:
 int ProfileID;
 	/**
@@ -39,7 +39,7 @@ int ProfileID;
 	 * Instead of creating a new one every time we call getMotionProfileStatus,
 	 * keep one copy.
 	 */
-	MotionProfileStatus _statusL;
+	MotionProfileStatus _statusR;
 
 	/** additional cache for holding the active trajectory point */
 	double _pos = 0, _vel = 0, _heading = 0;
@@ -48,7 +48,7 @@ int ProfileID;
 	 * or call set(), just get motion profile status and make decisions based on
 	 * motion profile.
 	 */
-	TalonSRX & LeftDrive;
+	TalonSRX & RightDrive;
 	/**
 	 * State machine to make sure we let enough of the motion profile stream to
 	 * talon before we fire it.
@@ -79,7 +79,7 @@ int ProfileID;
 	 * How many trajectory points do we wait for before firing the motion
 	 * profile.
 	 */
-	static const int kMinPointsInTalon = 5;
+	static const int kMinPointsInTalon = 17;
 	/**
 	 * Just a state timeout to make sure we don't get stuck anywhere. Each loop
 	 * is about 20ms.
@@ -90,14 +90,14 @@ int ProfileID;
 	 * talon. It doesn't need to be very accurate, just needs to keep pace with
 	 * the motion profiler executer. Now if you're trajectory points are slow,
 	 * there is no need to do this, just call
-	 * LeftDrive.processMotionProfileBuffer() in your teleop loop. Generally
+	 * RightDrive.processMotionProfileBuffer() in your teleop loop. Generally
 	 * speaking you want to call it at least twice as fast as the duration of
 	 * your trajectory points. So if they are firing every 20ms, you should call
 	 * every 10ms.
 	 */
 	void PeriodicTask() {
 		/* keep Talons happy by moving the points from top-buffer to bottom-buffer */
-		LeftDrive.ProcessMotionProfileBuffer();
+		RightDrive.ProcessMotionProfileBuffer();
 	}
 	/**
 	 * Lets create a periodic task to funnel our trajectory points into our talon.
@@ -106,13 +106,13 @@ int ProfileID;
 	 */
 	Notifier _notifer;
 
-	MPL(TalonSRX & talon) :
-			LeftDrive(talon), _notifer(&MPL::PeriodicTask, this) {
+	MP(TalonSRX & talon) :
+			RightDrive(talon), _notifer(&MP::PeriodicTask, this) {
 		/*
 		 * since our MP is 10ms per point, set the control frame rate and the
 		 * notifer to half that
 		 */
-		LeftDrive.ChangeMotionControlFramePeriod(5);
+		RightDrive.ChangeMotionControlFramePeriod(5);
 
 		/* start our tasking */
 		_notifer.StartPeriodic(0.005);
@@ -127,7 +127,7 @@ int ProfileID;
 		 * middle of an MP, and now we have the second half of a profile just
 		 * sitting in memory.
 		 */
-		LeftDrive.ClearMotionProfileTrajectories();
+		RightDrive.ClearMotionProfileTrajectories();
 		/* When we do re-enter motionProfile control mode, stay disabled. */
 		_setValue = SetValueMotionProfile::Disable;
 		/* When we do start running our state machine start at the beginning. */
@@ -165,7 +165,7 @@ int ProfileID;
 		}
 
 		/* first check if we are in MP mode */
-		if (LeftDrive.GetControlMode() != ControlMode::MotionProfile) {
+		if (RightDrive.GetControlMode() != ControlMode::MotionProfile) {
 			/*
 			 * we are not in MP mode. We are probably driving the robot around
 			 * using gamepads or some other mode.
@@ -199,7 +199,7 @@ int ProfileID;
 					 * points
 					 */
 					/* do we have a minimum numberof points in Talon */
-					if (_statusL.btmBufferCnt > kMinPointsInTalon ) {
+					if (_statusR.btmBufferCnt > kMinPointsInTalon) {
 						/* start (once) the motion profile */
 						_setValue = SetValueMotionProfile::Enable;
 						/* MP will start once the control frame gets scheduled */
@@ -213,7 +213,7 @@ int ProfileID;
 					 * timeout. Really this is so that you can unplug your talon in
 					 * the middle of an MP and react to it.
 					 */
-					if (_statusL.isUnderrun == false) {
+					if (_statusR.isUnderrun == false) {
 						_loopTimeout = kNumLoopsTimeout;
 					}
 					/*
@@ -221,7 +221,7 @@ int ProfileID;
 					 * another. We will go into hold state so robot servo's
 					 * position.
 					 */
-					if (_statusL.activePointValid && _statusL.isLast) {
+					if (_statusR.activePointValid && _statusR.isLast) {
 						/*
 						 * because we set the last point's isLast to true, we will
 						 * get here when the MP is done
@@ -234,13 +234,13 @@ int ProfileID;
 			}
 
 			/* Get the motion profile status every loop */
-			LeftDrive.GetMotionProfileStatus(_statusL);
-			_heading = LeftDrive.GetActiveTrajectoryHeading();
-			_pos = LeftDrive.GetActiveTrajectoryPosition();
-			_vel = LeftDrive.GetActiveTrajectoryVelocity();
+			RightDrive.GetMotionProfileStatus(_statusR);
+			_heading = RightDrive.GetActiveTrajectoryHeading();
+			_pos = RightDrive.GetActiveTrajectoryPosition();
+			_vel = RightDrive.GetActiveTrajectoryVelocity();
 
 			/* printfs and/or logging */
-			Instrumentation::Process(_statusL, _pos, _vel, _heading);
+			Instrumentation::Process(_statusR, _pos, _vel, _heading);
 		}
 	}
 	/**
@@ -256,27 +256,27 @@ int ProfileID;
 		/* since this example only has one talon, just update that one */
 		switch(ProfileID){
             case 1:
-            startFilling(kMotionProfileL, kMotionProfileSzL);
+            startFilling(kMotionProfileR, kMotionProfileSzR);
             break;
 			 case 2:
-            startFilling(kTrialL, kTrialszL);
+            startFilling(kTrialR, kTrialszR);
             break;
 			 case 3:
-            startFilling(RightTurnL, RightTurnszL);
+            startFilling(RightTurnR, RightTurnszR);
             break;
 			 case 4:
-            startFilling(RocketL, RocketszL);
+            startFilling(RocketR, RocketszR);
             break;
         }
         
 	}
-	
+
 	void startFilling(const double profile[][3], int totalCnt) {
 		/* create an empty point */
 		TrajectoryPoint point;
 
 		/* did we get an underrun condition since last time we checked ? */
-		if (_statusL.hasUnderrun) {
+		if (_statusR.hasUnderrun) {
 			/* better log it so we know about it */
 			Instrumentation::OnUnderrun();
 			/*
@@ -284,23 +284,22 @@ int ProfileID;
 			 * "is underrun", because the former is cleared by the application.
 			 * That way, we never miss logging it.
 			 */
-			LeftDrive.ClearMotionProfileHasUnderrun(Constants::kTimeoutMs);
+			RightDrive.ClearMotionProfileHasUnderrun(Constants::kTimeoutMs);
 		}
 
 		/*
 		 * just in case we are interrupting another MP and there is still buffer
 		 * points in memory, clear it.
 		 */
-		LeftDrive.ClearMotionProfileTrajectories();
+		RightDrive.ClearMotionProfileTrajectories();
 
 		/* set the base trajectory period to zero, use the individual trajectory period below */
-		LeftDrive.ConfigMotionProfileTrajectoryPeriod(Constants::kBaseTrajPeriodMs, Constants::kTimeoutMs);
+		RightDrive.ConfigMotionProfileTrajectoryPeriod(Constants::kBaseTrajPeriodMs, Constants::kTimeoutMs);
 
 		/* This is fast since it's just into our TOP buffer */
 		for (int i = 0; i < totalCnt; ++i) {
 			double positionRot = profile[i][0];
 			double velocityRPM = profile[i][1];
-			
 
 			/* for each point, fill our structure and pass it to API */
 			point.position = positionRot * Constants::kSensorUnitsPerRotation; //Convert Revolutions to Units
@@ -317,7 +316,7 @@ int ProfileID;
 			if ((i + 1) == totalCnt)
 				point.isLastPoint = true; /* set this to true on the last point  */
 
-			LeftDrive.PushMotionProfileTrajectory(point);
+			RightDrive.PushMotionProfileTrajectory(point);
 		}
 	}
 	/**
