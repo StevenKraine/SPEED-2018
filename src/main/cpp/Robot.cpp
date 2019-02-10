@@ -6,65 +6,38 @@
 /*----------------------------------------------------------------------------*/
 
 #include "Robot.h"
-//#include <pathfinder.h>
+#include "Instrum.h"
 #include <iostream>
-
+#include "Profile.h"
 #include <frc/smartdashboard/SmartDashboard.h>
-#include <WPILib.h>
-#include "frc/smartdashboard/Smartdashboard.h"
-#include "networktables/NetworkTable.h"
+#include <networktables/NetworkTableEntry.h>
+#include <networktables/NetworkTable.h>
 #include "networktables/NetworkTableInstance.h"
-#include "networktables/NetworkTableEntry.h"
-#include "LeftProfile.h"
-void Robot::executeProfile()
-{
-    LeftDrive.StartMotionProfile(LeftMP, 10, ControlMode::MotionProfile);
-}
+
 void Robot::RobotInit() {
-  double P=0.1;//.05
-	double I=0.0;//.01
-	double D=0.0;//.2
+  //InitBuffer(Profile, kStraightCenter, kStraightCenterSz,1);
+  InitBuffer(Profile1, kCargoToFeeder,kCargoToFeederSz,-1);
+    InitBuffer(Turnback, kTurnAround, kTurnAroundSz,-1);
+ // InitBuffer(FastBack, kStraightCenter, kStraightCenterSz,1);
+Profidilly = 0;
+  _state = 0;
+  LeftDrive.ClearMotionProfileTrajectories();
+  RightDrive.ClearMotionProfileTrajectories();
+  RightDrive.ConfigAllSettings(Follow);
+  LeftDrive.ConfigAllSettings(Master);
 
-			LeftDrive.Config_kF(0,.5,10);
-			RightDrive.Config_kF(0,.5,10);
-			LeftDrive.EnableCurrentLimit(true);
-			LeftDrive.ConfigOpenloopRamp(.125,10);
-			LeftDrive.ConfigPeakCurrentLimit(30,10);
-			LeftDrive.ConfigPeakCurrentDuration(2000,10);
-			LeftDrive.Config_kP(0,P,10);
-			LeftDrive.Config_kI(0,I,10);
-			LeftDrive.Config_kD(0,D,10);
-			LeftDrive.Config_IntegralZone(0,100,10);
-			LeftDrive.ConfigSelectedFeedbackSensor(QuadEncoder,0,10);
-			LeftDrive.SetSensorPhase(true);
+  LeftDrive.SetSensorPhase(true);
+      RightDrive.SetSensorPhase(true);
 
-			LeftDrive.SetInverted(true);
-			LeftDrive.ConfigMotionProfileTrajectoryPeriod(30,10);
-			LeftDrive1.SetInverted(LeftDrive.GetInverted());
-			LeftDrive2.SetInverted(LeftDrive.GetInverted());
-			LeftDrive.ConfigPeakOutputForward(1,10);
-			LeftDrive.ConfigPeakOutputReverse(-1,10);
-			RightDrive.SetInverted(false);
-			RightDrive.ConfigPeakOutputForward(1,10);
-			RightDrive.ConfigPeakOutputReverse(-1,10);
-			RightDrive1.SetInverted(RightDrive.GetInverted());
-			RightDrive2.SetInverted(RightDrive.GetInverted());
-			RightDrive.EnableCurrentLimit(true);
-			RightDrive.ConfigOpenloopRamp(.125,10);
-			RightDrive.ConfigPeakCurrentLimit(30,10);
-			RightDrive.ConfigPeakCurrentDuration(2000,10);
-			RightDrive.Config_kP(0,P,10);
-			RightDrive.Config_kI(0,I,10);
-			RightDrive.Config_kD(0,D,10);
-			RightDrive.Config_IntegralZone(0,100,10);
-			RightDrive.ConfigSelectedFeedbackSensor(QuadEncoder,0,10);
-			RightDrive.SetSensorPhase(true);
+      LeftDrive.SetInverted(true);
+      RightDrive.SetInverted(false);
 
-			RightDrive.ConfigMotionProfileTrajectoryPeriod(30,10);
-  m_chooser.SetDefaultOption(kAutoNameDefault, kAutoNameDefault);
-  m_chooser.AddOption(kAutoNameCustom, kAutoNameCustom);
-  frc::SmartDashboard::PutData("Auto Modes", &m_chooser);
-}
+      LeftDrive.SetStatusFramePeriod(StatusFrameEnhanced::Status_14_Turn_PIDF1, 20); //Telemetry using Phoenix Tuner
+
+    m_chooser.SetDefaultOption(kAutoNameDefault, kAutoNameDefault);
+    m_chooser.AddOption(kAutoNameCustom, kAutoNameCustom);
+    frc::SmartDashboard::PutData("Auto Modes", &m_chooser);
+  }
 
 /**
  * This function is called every robot packet, no matter the mode. Use
@@ -107,163 +80,244 @@ void Robot::AutonomousPeriodic() {
     // Default Auto goes here
   }
 }
-void Robot::fillBuffer(int Sz, double Prof[][3])
-{
-    TrajectoryPoint pointL; //Create just one trajectorypoint to write with
-    for(int i = 0; i < Sz; i++)
-    {
-        pointL.useAuxPID = false; //We aren't using aux pid
-        pointL.profileSlotSelect0 = 0; //Use slot 0 for PIDF Gains
 
-        if(i == 0) pointL.zeroPos = true;
-        else pointL.zeroPos = false;
-
-        pointL.position = Prof[i][0]; //Scale to talon native units
-        pointL.velocity = Prof[i][1]; //Scale to talon native units
-        pointL.timeDur = Prof[i][2]; //Milliseconds
-        
-        if(i == Sz - 1) pointL.isLastPoint = true;
-        else pointL.isLastPoint = false;
-
-        LeftMP.Write(pointL);
-
-
-    }
-}
 void Robot::TeleopInit() {}
-void Robot::ProfileControl(){
- 
- /*   SetValueMotionProfile setOutputL = LeftMP.getSetValue();
-		SetValueMotionProfile setOutputR = RightMP.getSetValue();
-		
-	LeftDrive.Set(ControlMode::MotionProfile, setOutputL);
-	RightDrive.Set(ControlMode::MotionProfile, setOutputR);
-  RightMP.control();
-	RightMP.PeriodicTask();
-	LeftMP.control();
-	LeftMP.PeriodicTask();*/
- 
- 	if(Robot::spot<=2 and Robot::spot>0){
-     Robot::RunProfile(Robot::pop);
-  }
-	}
-void Robot::RunProfile(int ProfID){
- 
- /* switch(Robot::spot){
-  case 0:
-  LeftMP.reset();
-  RightMP.reset();
-  LeftMP.ProfileID = ProfID;
-  RightMP.ProfileID = ProfID;
-   Robot::spot = 1;
-	 
-  Robot::pop = ProfID;
-  
- 
-  break;
-  case 1:
-  LeftMP.start();
-  RightMP.start();
-
-  Robot::spot = 2;
-  break;
-  case 2:
- 
-
-  
-
-  
-  break;
-  
-  }*/
-	}
-void Robot::FollowPath(){
- for(int i = 0; i < Robot::total; i++){
-
- }
-	}
-void Robot::TeleopPeriodic() {
-	//	LeftDrive.StartMotionProfile()
-
-	std::shared_ptr<NetworkTable> table = nt::NetworkTableInstance::GetDefault().GetTable("limelight");
-	double targetOffsetAngle_Horizontal = table->GetNumber("tx",0.0);
-	double targetOffsetAngle_Vertical = table->GetNumber("ty",0.0);
-	double targetArea = table->GetNumber("ta",0.0);
-	double targetSkew = table->GetNumber("ts",0.0);
-
-	
-	if(Driver.GetBButtonPressed()==1){
-		Robot::drive = !Robot::drive;
-	}
-	if(Driver.GetYButtonPressed()==1){
-  fillBuffer(RocketszL,RocketL);
-  // Robot::spot = 0;
-  // Robot::RunProfile(1);
-	};
-	 if(Driver.GetXButtonPressed()==1){
-  executeProfile();
-  // Robot::spot = 0;
-   //Robot::RunProfile(4);
-	};
-	/*if(Robot::drive == 1){
-		LeftDrive.Set(ControlMode::PercentOutput,Driver.GetY(frc::XboxController::kLeftHand));
-		RightDrive.Set(ControlMode::PercentOutput,Driver.GetY(frc::XboxController::kRightHand));
-	}else{Robot::ProfileControl();
- 
-  if(Driver.GetAButtonPressed()==1){
-	Robot::spot = 0;
-   Robot::RunProfile(2);
-	 /*	if(LeftMP._statusL.btmBufferCnt>100 and RightMP._statusR.btmBufferCnt >100){
-		 LeftDrive.ConfigPeakOutputForward(0,10);
-		 LeftDrive.ConfigPeakOutputReverse(0,10);
-		 RightDrive.ConfigPeakOutputForward(0,10);
-		 RightDrive.ConfigPeakOutputReverse(0,10);
-	 }else{
-		 LeftDrive.ConfigPeakOutputForward(1,10);
-		 LeftDrive.ConfigPeakOutputReverse(-1,10);
-		 RightDrive.ConfigPeakOutputForward(1,10);
-		 RightDrive.ConfigPeakOutputReverse(-1,10);
-	 }
-  }*/
-
-  //}
- LeftDrive.ConfigPeakOutputForward(1,10);
-		 LeftDrive.ConfigPeakOutputReverse(-1,10);
-		 RightDrive.ConfigPeakOutputForward(1,10);
-		 RightDrive.ConfigPeakOutputReverse(-1,10);
-
-	Pigeon.GetFusedHeading();
-	double xyz[3];
-	Pigeon.GetAccumGyro(xyz);
-
- int LeftEn = LeftDrive.GetSelectedSensorPosition(0);
- int RightEn = RightDrive.GetSelectedSensorPosition(0);
- 	LeftDrive1.Set(ControlMode::PercentOutput,LeftDrive.GetMotorOutputPercent());
-	LeftDrive2.Set(ControlMode::PercentOutput,LeftDrive.GetMotorOutputPercent());
-	RightDrive1.Set(ControlMode::PercentOutput,RightDrive.GetMotorOutputPercent());
-	RightDrive2.Set(ControlMode::PercentOutput,RightDrive.GetMotorOutputPercent());
-	LeftDrive.GetMotionProfileTopLevelBufferCount();
-  frc::SmartDashboard::PutNumber("spot",Robot::spot);
- /* frc::SmartDashboard::PutNumber("LeftBtm",LeftMP._statusL.btmBufferCnt);
-	 frc::SmartDashboard::PutNumber("RightBtm",RightMP._statusR.btmBufferCnt);
-	if(Driver.GetYButtonPressed()==1){
-
-	Pigeon.SetAccumZAngle(0,10);
-
-	Robot::spot = 0;
-	}
-	frc::SmartDashboard::PutNumber("horizontal",targetOffsetAngle_Horizontal);*/
-		frc::SmartDashboard::PutNumber("rightEncoder", RightEn/4096);
-	frc::SmartDashboard::PutNumber("LeftEncoder", LeftEn/4096);
+void Robot::SmartDashboard(){
+  frc::SmartDashboard::PutNumber("Profidilly", 	Profidilly);
+  frc::SmartDashboard::PutNumber("state", 	_state);
 	frc::SmartDashboard::PutNumber("Buffer", 	LeftDrive.GetMotionProfileTopLevelBufferCount());
-	frc::SmartDashboard::PutNumber("x",xyz[1]);
-	frc::SmartDashboard::PutNumber("y",xyz[2]);
-	frc::SmartDashboard::PutNumber("z",xyz[3]);
+  frc::SmartDashboard::PutBoolean("1",ButtonOne);
+  frc::SmartDashboard::PutBoolean("2",ButtonTwo);
+  frc::SmartDashboard::PutBoolean("3",ButtonThree);
+  frc::SmartDashboard::PutBoolean("4",ButtonFour);
+  frc::SmartDashboard::PutBoolean("5",ButtonFive);
+  frc::SmartDashboard::PutBoolean("6",ButtonSix);
+  frc::SmartDashboard::PutBoolean("7",ButtonSeven);
+  frc::SmartDashboard::PutBoolean("8",ButtonEight);
+  frc::SmartDashboard::PutBoolean("9",ButtonNine);
+  frc::SmartDashboard::PutBoolean("10",ButtonTen);
+  frc::SmartDashboard::PutBoolean("11",ButtonEleven);
+  frc::SmartDashboard::PutBoolean("12",ButtonTwelve);
+  frc::SmartDashboard::PutBoolean("13",ButtonThirteen);
+  frc::SmartDashboard::PutBoolean("14",ButtonFourteen);
+  ButtonOne = Manipulatortwo.GetRawButton(1);
+   ButtonTwo = Manipulatortwo.GetRawButton(2);
+   ButtonThree= Manipulatortwo.GetRawButton(3);
+   ButtonFour =Manipulatortwo.GetRawButton(4);
+   ButtonFive =Manipulatortwo.GetRawButton(5);
+   ButtonSix =Manipulatortwo.GetRawButton(6);
+   ButtonSeven= Manipulatortwo.GetRawButton(7);
+   ButtonEight =Manipulatortwo.GetRawButton(8);
+   ButtonNine =Manipulatortwo.GetRawButton(9);
+   ButtonTen =Manipulatortwo.GetRawButton(10);
+   ButtonEleven= Manipulatortwo.GetRawButton(11);
+   ButtonTwelve =Manipulatortwo.GetRawButton(12);
+   ButtonThirteen= Manipulatortwo.GetRawButton(13);
+   ButtonFourteen =Manipulatortwo.GetRawButton(14);
+  }
+void Robot::Followers(){ LeftDrive1.Follow(LeftDrive, FollowerType_PercentOutput);
+	LeftDrive2.Follow(LeftDrive, FollowerType_PercentOutput);
+	RightDrive1.Follow(RightDrive, FollowerType_PercentOutput);
+	RightDrive2.Follow(RightDrive, FollowerType_PercentOutput);
+  RightDrive1.SetInverted(RightDrive.GetInverted());
+			RightDrive2.SetInverted(RightDrive.GetInverted());
+      LeftDrive1.SetInverted(LeftDrive.GetInverted());
+			LeftDrive2.SetInverted(LeftDrive.GetInverted());}
+void Robot::RunProfile(BufferedTrajectoryPointStream& Buffer,const double profile[][4], int totalCnt,int direction){
+    InitBuffer(Buffer,profile,totalCnt,direction);
+    LeftDrive.ClearMotionProfileTrajectories();
+    LeftDrive.GetSensorCollection().SetQuadraturePosition(0);
+            RightDrive.GetSensorCollection().SetQuadraturePosition(0);
+            Pigeon.SetYaw(0);
+             RightDrive.Follow(LeftDrive, FollowerType_AuxOutput1);
+            LeftDrive.StartMotionProfile(Buffer, 120, ControlMode::MotionProfileArc);
+ 
+  }
+void Robot::TeleopPeriodic() {
+  Robot::Followers();
+  Robot::SmartDashboard();
+ // Robot::Limelight();
+ // Robot::LiftControl();
+ // Robot::IntakeControl();
+ 
+    double ypr [3];
+   Pigeon.GetYawPitchRoll(ypr);
+     frc::SmartDashboard::PutNumber("yaw", ypr[0]);
+if(Driver.GetAButton()==1 or Driver.GetBButton()==1 or Driver.GetXButton()==1 or Driver.GetYButton()==1){
+count = 100;
+}
+if(count <10){
+  LeftDrive.Set(ControlMode::PercentOutput,Driver.GetY(frc::XboxController::kLeftHand));
+   RightDrive.Set(ControlMode::PercentOutput,Driver.GetY(frc::XboxController::kRightHand));
+}
+  if(Driver.GetAButtonPressed()==1){ 
+       LeftDrive.ClearMotionProfileTrajectories();
+
+    Profidilly = 0;
+      Robot::RunProfile(FastBack,kStraightCenter,kStraightCenterSz,1);
+}
+ if(Driver.GetBButtonPressed()==1){ 
+   LeftDrive.ClearMotionProfileTrajectories();
+    Profidilly = 0;
+      Robot::RunProfile(FastBack,kCargoToFeeder,kCargoToFeederSz,-1);
+}
 
 
-	}
+    switch(Profidilly){
+      case 0:
+if(LeftDrive.IsMotionProfileFinished()==1){
+  Profidilly = 1;
+}
+      break;
+      case 1:
 
-void Robot::TestPeriodic() {}
+      break;
+    }
+   
+	
+
+  }
+
+void Robot::TestPeriodic() {
+
+  }
+void Robot::IntakeControl(){
+
+  }
+void Robot::LiftControl(){
+  if(Manipulatortwo.GetRawButton(6)==1){
+  Lift.Set(ControlMode::Position,6000);
+  }
+  if(Manipulatortwo.GetRawButton(7)==1){
+    Lift.Set(ControlMode::Position,4000);
+  }
+  if(Manipulatortwo.GetRawButton(8)==1){
+    Lift.Set(ControlMode::Position,2000);
+  }
+  if(Manipulatortwo.GetRawButton(5)==1){
+    Lift.Set(ControlMode::Position,0);
+  }
+
+
+
+  }
+void Robot::Limelight(){
+	   std::shared_ptr<NetworkTable> table = nt::NetworkTableInstance::GetDefault().GetTable("limelight");
+
+  double targetOffsetAngle_Horizontal = table->GetNumber("tx",0.0);
+  double targetOffsetAngle_Vertical = table->GetNumber("ty",0.0);
+  double targetArea = table->GetNumber("ta",0.0);
+  double targetSkew = table->GetNumber("ts",0.0);
+  }
+
+void Robot::InitBuffer(BufferedTrajectoryPointStream& ProfID,const double profile[][4], int totalCnt,int direction)
+  {
+      bool forward = true; // set to false to drive in opposite direction of profile (not really needed
+                          // since you can use negative numbers in profile).
+
+      TrajectoryPoint point; // temp for for loop, since unused params are initialized
+                            // automatically, you can alloc just one
+
+      /* clear the buffer, in case it was used elsewhere */
+      ProfID.Clear();
+
+      //double turnAmount = rotations * 8192.0; //8192 units per rotation for a pigeon
+
+
+      /* Insert every point into buffer, no limit on size */
+      for (int i = 0; i < totalCnt; ++i) {
+
+          double Direction = direction;//d forward ? +1 : -1;
+          double positionRot = profile[i][0];
+          double velocityRPM = profile[i][1];
+          double Angle;
+          if(direction<0){
+            Angle = profile[i][3] -3.1415962;
+          }else{
+              Angle = profile[i][3] ;
+          }
+        
+          int durationMilliseconds = (int) profile[i][2];
+
+          /* for each point, fill our structure and pass it to API */
+          point.timeDur = durationMilliseconds;
+          point.position = Direction * positionRot /*(1/.6366)*/* 5190 ;//(8192/3.1415962); // Convert Revolutions to
+                                                          // Units
+          point.velocity = Direction * velocityRPM * (1/.6366)/ 600.0 ;//(8192/3.1415962); // Convert RPM to
+                                                                  // Units/100ms
+          
+          /** 
+           * Here is where you specify the heading of the robot at each point. 
+           * In this example we're linearly interpolating creating a segment of a circle to follow
+           */
+          point.auxiliaryPos = Angle *(8192/360)*(180/3.14159)+40; //turnAmount * ((double)i / (double)totalCnt); //Linearly interpolate the turn amount to do a circle
+          point.auxiliaryVel = 0;
+
+
+          point.profileSlotSelect0 = 0; /* which set of gains would you like to use [0,3]? */
+          point.profileSlotSelect1 = 1; /* which set of gains would you like to use [0,3]? */
+          point.zeroPos = (i == 0); /* set this to true on the first point */
+          point.isLastPoint = ((i + 1) == totalCnt); /* set this to true on the last point */
+          point.arbFeedFwd = 0; /* you can add a constant offset to add to PID[0] output here */
+
+          point.useAuxPID = true; /* Using auxiliary PID */
+          ProfID.Write(point);
+  }
+  }
+void Robot::InitBuffer1(const double profile[][4], int totalCnt,int direction)
+  {
+      bool forward = true; // set to false to drive in opposite direction of profile (not really needed
+                          // since you can use negative numbers in profile).
+
+      TrajectoryPoint point; // temp for for loop, since unused params are initialized
+                            // automatically, you can alloc just one
+
+      /* clear the buffer, in case it was used elsewhere */
+      Profile1.Clear();
+
+      //double turnAmount = rotations * 8192.0; //8192 units per rotation for a pigeon
+
+
+      /* Insert every point into buffer, no limit on size */
+      for (int i = 0; i < totalCnt; ++i) {
+
+          double Direction = direction;//d forward ? +1 : -1;
+          double positionRot = profile[i][0];
+          double velocityRPM = profile[i][1];
+          double Angle;
+          if(direction<0){
+            Angle = profile[i][3] -3.1415962;
+          }else{
+              Angle = profile[i][3] ;
+          }
+        
+          int durationMilliseconds = (int) profile[i][2];
+
+          /* for each point, fill our structure and pass it to API */
+          point.timeDur = durationMilliseconds;
+          point.position = Direction * positionRot /*(1/.6366)*/* 5190 ;//(8192/3.1415962); // Convert Revolutions to
+                                                          // Units
+          point.velocity = Direction * velocityRPM * (1/.6366)/ 600.0 ;//(8192/3.1415962); // Convert RPM to
+                                                                  // Units/100ms
+          
+          /** 
+           * Here is where you specify the heading of the robot at each point. 
+           * In this example we're linearly interpolating creating a segment of a circle to follow
+           */
+          point.auxiliaryPos = Angle *(8192/360)*(180/3.14159)+40; //turnAmount * ((double)i / (double)totalCnt); //Linearly interpolate the turn amount to do a circle
+          point.auxiliaryVel = 0;
+
+
+          point.profileSlotSelect0 = 0; /* which set of gains would you like to use [0,3]? */
+          point.profileSlotSelect1 = 1; /* which set of gains would you like to use [0,3]? */
+          point.zeroPos = (i == 0); /* set this to true on the first point */
+          point.isLastPoint = ((i + 1) == totalCnt); /* set this to true on the last point */
+          point.arbFeedFwd = 0; /* you can add a constant offset to add to PID[0] output here */
+
+          point.useAuxPID = true; /* Using auxiliary PID */
+          Profile1.Write(point);
+      }
+    }
 
 #ifndef RUNNING_FRC_TESTS
 int main() { return frc::StartRobot<Robot>(); }

@@ -6,17 +6,19 @@
 /*----------------------------------------------------------------------------*/
 
 #pragma once
-#include <WPILib.h>
-#include <string>
 #include <ctre/Phoenix.h>
-#include <IterativeRobot.h>
-#include <SmartDashboard/SendableChooser.h>
-#include <MPLeftController.h>
+#include <string>
+#include <WPILib.h>
+#include <frc/IterativeRobot.h>
+#include <frc/smartdashboard/SendableChooser.h>
+#include <PlotThread.h>
+#include "MasterProfileConfiguration.h"
+#include "FollowerProfileConfiguration.h"
 
-#include <MPRight.h>
 class Robot : public frc::IterativeRobot {
-	XboxController Driver;
-	XboxController Manipulator;
+
+ frc::XboxController Driver;
+	frc::XboxController Manipulator;
 	WPI_TalonSRX RightDrive;
 	WPI_TalonSRX Lift;
 	WPI_TalonSRX LeftDrive;
@@ -24,20 +26,58 @@ class Robot : public frc::IterativeRobot {
 	WPI_VictorSPX RightDrive2;
 	WPI_VictorSPX LeftDrive1;
 	WPI_VictorSPX LeftDrive2;
-	//MPL LeftMP;
-	//MP RightMP;
 	PigeonIMU Pigeon;
-	BufferedTrajectoryPointStream LeftMP;
-	BufferedTrajectoryPointStream RightMP;
-	
- 
+	BufferedTrajectoryPointStream Profile;
+	BufferedTrajectoryPointStream Profile1;
+	BufferedTrajectoryPointStream FastBack;
+	BufferedTrajectoryPointStream Turnback;
+	//BufferedTrajectoryPointStream
+//	BufferedTrajectoryPointStream
+//	BufferedTrajectoryPointStream
+//	BufferedTrajectoryPointStream
+//	BufferedTrajectoryPointStream
+//	BufferedTrajectoryPointStream
+//	BufferedTrajectoryPointStream
+//	BufferedTrajectoryPointStream
+//	BufferedTrajectoryPointStream
+//	BufferedTrajectoryPointStream
+///	BufferedTrajectoryPointStream
+//	BufferedTrajectoryPointStream
+//	BufferedTrajectoryPointStream
 
-public:
+	FollowerProfileConfiguration Follow;
+  MasterProfileConfiguration Master;
+	PlotThread Plot;
+	frc::Joystick Manipulatortwo;
+	//frc::Compressor pressor;
+ public:
+ bool ButtonOne;
+ bool ButtonTwo;
+ bool ButtonThree;
+ bool ButtonFour;
+ bool ButtonFive;
+ bool ButtonSix;
+ bool ButtonSeven;
+ bool ButtonEight;
+ bool ButtonNine;
+ bool ButtonTen;
+ bool ButtonEleven;
+ bool ButtonTwelve;
+ bool ButtonThirteen;
+ bool ButtonFourteen;
+ int count;
+ 
+ int button;
+int _state;
 int total;
 int spot = 100;
 int pop = 100;
 bool drive = 0;
+int Profidilly;
 	Robot(void):
+	Manipulatortwo (2),
+	Plot (&LeftDrive),
+  Follow(),
 	Lift (1),
 Driver (0),
 Manipulator (1),
@@ -47,25 +87,31 @@ LeftDrive(3),
 	RightDrive2(7),
 	LeftDrive1(9),
 	LeftDrive2(8),
-	//LeftMP (LeftDrive),
-	//RightMP(RightDrive),
-	Pigeon(&Lift)
-{}
-	void fillBuffer(int Sz,double Prof[][3]);
-	void executeProfile();
-	void FollowPath();
-	void RunProfile(int ProfID);
-	void ProfileControl();
-	void RobotInit() override;
-	void AutonomousInit() override;
-	void AutonomousPeriodic() override;
-	void TeleopInit() override;
-	void TeleopPeriodic() override;
-	void TestPeriodic() override;
+	Pigeon(&Lift),
+  Master(&RightDrive,&Pigeon)
+ 
+ 
+ {};
+ void RunProfile(BufferedTrajectoryPointStream& Buffer, const double profile[][4], int totalCnt,int direction);
+ void InitBuffer(BufferedTrajectoryPointStream& ProfID, const double profile[][4], int totalCnt, int direction);
+ void InitBuffer1(const double profile[][4], int totalCnt, int direction);
+ void LiftControl();
+ void IntakeControl();
+ void Limelight();
+ void SmartDashboard();
+ void Followers();
+
+  void RobotInit() override;
   void RobotPeriodic() override;
-private:
-	frc::SendableChooser<std::string> m_chooser;
-	const std::string kAutoNameDefault = "Default";
-	const std::string kAutoNameCustom = "My Auto";
-	std::string m_autoSelected;
+  void AutonomousInit() override;
+  void AutonomousPeriodic() override;
+  void TeleopInit() override;
+  void TeleopPeriodic() override;
+  void TestPeriodic() override;
+
+ private:
+  frc::SendableChooser<std::string> m_chooser;
+  const std::string kAutoNameDefault = "Default";
+  const std::string kAutoNameCustom = "My Auto";
+  std::string m_autoSelected;
 };
