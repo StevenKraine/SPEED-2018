@@ -17,16 +17,16 @@ public:
 
         /* Find these gains in Phoenix Tuner first and later put them here */
         slot0.kF = 0.075;//125; //.25
-        slot0.kP = 0.2; //.8
+        slot0.kP = 0.315; //.8//.71
         slot0.kI = 0.0;
-        slot0.kD = 0.5;//80; Robot surges if > 0
+        slot0.kD = 0.5;//.5//80; Robot surges if > 0
         slot0.integralZone = 100; //400
         slot0.closedLoopPeakOutput = 1.0;
 
         slot1.kF = 0.0;
-        slot1.kP = 1.0;//1
-        slot1.kI = 0.01;//.01
-        slot1.kD = 0.05;//.01
+        slot1.kP = 1;//1//1.2
+        slot1.kI = 0.00;//.01
+        slot1.kD = 0.01;//.01
         slot1.integralZone = 20;
         slot1.closedLoopPeakOutput = 0.7;
 
@@ -36,7 +36,7 @@ public:
 
         /* Remote Sensor 1 is the Pigeon over CAN */
         remoteFilter1.remoteSensorSource = RemoteSensorSource::RemoteSensorSource_GadgeteerPigeon_Yaw;
-        remoteFilter1.remoteSensorDeviceID = 1; //pigeon->GetDeviceNumber();
+        remoteFilter1.remoteSensorDeviceID = 1;//pigeon->GetDeviceNumber();
 
         /* Configure sensor sum to be this quad encoder and the other talon's encoder */
         sum0Term = FeedbackDevice::QuadEncoder;
