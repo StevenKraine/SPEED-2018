@@ -1,0 +1,105 @@
+switch (_state) {
+   
+    
+        /* drive master talon normally */
+        case 0:
+            LeftDrive.Set(ControlMode::PercentOutput, Driver.GetY(frc::XboxController::kLeftHand));
+            RightDrive.Set(ControlMode::PercentOutput, Driver.GetY(frc::XboxController::kRightHand));
+            if (Driver.GetAButton()==1) {
+                /* go to MP logic */
+                LeftDrive.SetSelectedSensorPosition(0,0,10);
+                RightDrive.SetSelectedSensorPosition(0,0,10);
+                Pigeon.SetYaw(0);
+                _state = 1;
+            }
+            break;
+
+        /* fire the MP, and stop calling set() since that will cancel the MP */
+        case 1:
+            LeftDrive.GetSensorCollection().SetQuadraturePosition(0);
+            RightDrive.GetSensorCollection().SetQuadraturePosition(0);
+              Pigeon.SetYaw(0);
+            /* wait for 10 points to buffer in firmware, then transition to MP */
+            RightDrive.Follow(LeftDrive, FollowerType_AuxOutput1);
+            LeftDrive.StartMotionProfile(Profile1, 120, ControlMode::MotionProfileArc);
+            _state = 2;
+            Instrum::PrintLine("MP started");
+            break;
+
+        /* wait for MP to finish */
+        case 2:
+         if(Driver.GetYButton()==1){
+              _state = 0;
+            }
+            if (LeftDrive.IsMotionProfileFinished()) {
+                Instrum::PrintLine("MP finished");
+                _state = 3;
+                
+            }
+            break;
+            case 3:
+            if(Driver.GetYButton()==1){
+              _state = _state+1;
+            }
+            break;
+            case 4:
+            Robot::InitBuffer1(kTurnAround,kTurnAroundSz,-1.0);
+            _state = 5;
+            break;
+            case 5:
+            LeftDrive.GetSensorCollection().SetQuadraturePosition(0);
+            RightDrive.GetSensorCollection().SetQuadraturePosition(0);
+              Pigeon.SetYaw(0);
+            /* wait for 10 points to buffer in firmware, then transition to MP */
+            RightDrive.Follow(LeftDrive, FollowerType_AuxOutput1);
+            LeftDrive.StartMotionProfile(Profile1, 120, ControlMode::MotionProfileArc);
+            _state = 6;
+            Instrum::PrintLine("MP started");
+            break;
+
+        /* wait for MP to finish */
+        case 6:
+         if(Driver.GetYButton()==1){
+              _state = 0;
+            }
+            if (LeftDrive.IsMotionProfileFinished()) {
+                Instrum::PrintLine("MP finished");
+                _state = 7;
+                
+            }
+            break;
+             case 7:
+            if(Driver.GetYButton()==1){
+              _state = _state+1;
+            }
+            break;
+            case 8:
+            Robot::InitBuffer1(kStraightCenter,kStraightCenterSz,1.0);
+            _state = 9;
+            break;
+            case 9:
+            LeftDrive.GetSensorCollection().SetQuadraturePosition(0);
+            RightDrive.GetSensorCollection().SetQuadraturePosition(0);
+              Pigeon.SetYaw(0);
+            /* wait for 10 points to buffer in firmware, then transition to MP */
+            RightDrive.Follow(LeftDrive, FollowerType_AuxOutput1);
+            LeftDrive.StartMotionProfile(Profile1, 120, ControlMode::MotionProfileArc);
+            _state = 10;
+            Instrum::PrintLine("MP started");
+            break;
+
+        /* wait for MP to finish */
+        case 10:
+         if(Driver.GetYButton()==1){
+              _state = 0;
+            }
+            if (LeftDrive.IsMotionProfileFinished()) {
+                Instrum::PrintLine("MP finished");
+                _state = 11;
+                
+            }
+            break;
+
+        /* MP is finished, nothing to do */
+        
+    }
